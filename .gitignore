@@ -18,3 +18,5 @@
 meshvpn
 client/client
 server/server
+
+.vscode/
