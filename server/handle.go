@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"net"
-	"sync"
 
 	"github.com/vikelabs/meshvpn/common/messages"
 	"github.com/vikelabs/meshvpn/common/util"
@@ -22,20 +20,32 @@ type recievedMessage struct {
 	body []byte
 }
 
+var handlers = handlerStruct{
+	h: map[byte]messageHandler{
+		messages.PingType: handlePing,
+		messages.PongType: handlePong,
+	},
+}
+
 func handleConnection(conn net.Conn) {
-	buf := bytes.NewBuffer(nil)
-	_, err := io.Copy(buf, conn)
-	if err != nil {
+	defer conn.Close()
+
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
+	if err != nil && !errors.Is(err, io.EOF) {
 		util.ErrPrintf(
 			"error reading from connection to %v: %v",
 			conn.RemoteAddr().String(), err,
 		)
 		return
 	}
+	if n == 0 {
+		util.ErrPrintln("error: response was length 0")
+	}
 
 	raw := recievedRawMessage{
 		conn: conn,
-		buf:  buf.Bytes(),
+		buf:  buf[:n],
 	}
 	err = handleMessage(raw)
 	if err != nil {
@@ -60,29 +70,4 @@ func parseMessage(raw recievedRawMessage) recievedMessage {
 		t:    raw.buf[0],
 		body: raw.buf[1:],
 	}
-}
-
-type messageHandler func(msg recievedMessage) error
-type syncHanders struct {
-	h map[byte]messageHandler
-	m sync.RWMutex
-}
-
-var handlers = syncHanders{
-	h: map[byte]messageHandler{
-		messages.PingType: handlePing,
-		messages.PongType: handlePong,
-	},
-}
-
-func handlePing(msg recievedMessage) error {
-	resp := fmt.Sprint("Ping from " + msg.conn.RemoteAddr().String())
-	_, err := msg.conn.Write([]byte(resp))
-	return err
-}
-
-func handlePong(msg recievedMessage) error {
-	resp := "Hello, " + string(msg.body) + "!"
-	_, err := msg.conn.Write([]byte(resp))
-	return err
 }

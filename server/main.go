@@ -18,10 +18,11 @@ func main() {
 	}
 
 	app := &cli.App{
-		Name:   "server",
-		Usage:  "Start a MeshVPN server",
-		Action: run,
-		Flags:  flags,
+		Name:            "server",
+		Usage:           "Start a MeshVPN server",
+		Action:          run,
+		Flags:           flags,
+		HideHelpCommand: true,
 	}
 
 	err := app.Run(os.Args)
