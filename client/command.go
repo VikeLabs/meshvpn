@@ -34,10 +34,17 @@ func pingCommand(msg outgoingMessage) error {
 	body := bytes.NewBuffer(nil)
 	body.Write([]byte{messages.PingType})
 
-	reply, err := remoteCall(msg, body.Bytes())
+	conn, err := dialServer(msg)
+	if err != nil {
+		return err
+	}
+
+	reply, err := remoteCall(body.Bytes(), conn)
 	if err != nil {
 		return errors.Wrap(err, "error ponging")
 	}
+
+	conn.Close()
 
 	fmt.Printf("got response:\n%s\n", string(reply))
 	return nil
@@ -48,37 +55,52 @@ func pongCommand(msg outgoingMessage) error {
 	body.Write([]byte{messages.PongType})
 	body.Write([]byte(pongName))
 
-	reply, err := remoteCall(msg, body.Bytes())
+	conn, err := dialServer(msg)
+	if err != nil {
+		return err
+	}
+
+	reply, err := remoteCall(body.Bytes(), conn)
 	if err != nil {
 		return errors.Wrap(err, "error ponging")
 	}
+
+	conn.Close()
 
 	fmt.Printf("got response:\n%s\n", string(reply))
 	return nil
 }
 
-func remoteCall(msg outgoingMessage, body []byte) ([]byte, error) {
+type deadlineReadWriter interface {
+	Read(b []byte) (int, error)
+	Write(b []byte) (int, error)
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
+}
+
+func remoteCall(body []byte, rw deadlineReadWriter) ([]byte, error) {
 	buf := bytes.NewBuffer(body)
 
-	conn, err := net.Dial("tcp", msg.serverLoc)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to connect to server")
-	}
-
 	// send message
-	conn.SetWriteDeadline(time.Now().Add(timeout))
-	_, err = io.Copy(conn, buf)
+	rw.SetWriteDeadline(time.Now().Add(timeout))
+	_, err := io.Copy(rw, buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
 	}
 
 	// get response
-	conn.SetReadDeadline(time.Now().Add(timeout))
-	_, err = io.Copy(buf, conn)
+	rw.SetReadDeadline(time.Now().Add(timeout))
+	_, err = io.Copy(buf, rw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get response")
 	}
-	conn.Close()
-
 	return buf.Bytes(), nil
+}
+
+func dialServer(msg outgoingMessage) (net.Conn, error) {
+	conn, err := net.Dial("tcp", msg.serverLoc)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to server")
+	}
+	return conn, nil
 }
