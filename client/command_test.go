@@ -2,69 +2,57 @@ package main
 
 import (
 	"bytes"
+	"net"
 	"testing"
-	"time"
 )
-
-type fakeDeadlineReadWriter struct {
-	w  func([]byte) (int, error)
-	r  func([]byte) (int, error)
-	dw func(time.Time) error
-	dr func(time.Time) error
-}
-
-func (f *fakeDeadlineReadWriter) Read(b []byte) (int, error) {
-	return f.r(b)
-}
-
-func (f *fakeDeadlineReadWriter) Write(b []byte) (int, error) {
-	return f.w(b)
-}
-
-func (f *fakeDeadlineReadWriter) SetReadDeadline(t time.Time) error {
-	return f.dr(t)
-}
-
-func (f *fakeDeadlineReadWriter) SetWriteDeadline(t time.Time) error {
-	return f.dw(t)
-}
 
 func TestRemoteCall(t *testing.T) {
 	// setup
-	noop := func(t time.Time) error { return nil }
-	read := bytes.NewBuffer(nil)
-	written := bytes.NewBuffer(nil)
+	clientConn, serverConn := net.Pipe()
 
-	fakeConn := fakeDeadlineReadWriter{
-		r:  read.Read,
-		w:  written.Write,
-		dr: noop,
-		dw: noop,
-	}
+	expectedRequest := []byte("example request to the server")
+	expectedResponse := []byte("example response from the server")
 
-	body := []byte("test body data to send")
+	actualRequest := make([]byte, 1024)
 
-	replyString := "response from the server"
-	read.WriteString(replyString)
+	// run this in the background, it'll block until the client uses the Conn
+	go func() {
+		n, err := serverConn.Read(actualRequest)
+		if err != nil {
+			t.Log("error reading from server pipe:", err)
+			t.Fail()
+		}
+		actualRequest = actualRequest[:n]
+
+		_, err = serverConn.Write(expectedResponse)
+		if err != nil {
+			t.Log("error writing to server pipe:", err)
+			t.Fail()
+		}
+		serverConn.Close()
+	}()
 
 	// execution
-	reply, err := remoteCall(body, &fakeConn)
+	actualResponse, err := remoteCall(expectedRequest, clientConn)
 	if err != nil {
-		t.Fatal("unexpected error from rpc: ", err)
+		t.Log("unexpected error from remoteCall: ", err)
+		t.Fail()
 	}
 
 	// checking
-	if !bytes.Equal(body, written.Bytes()) {
-		t.Fatal("client didn't send correct bytes:",
-			"\nexpected:", string(body),
-			"\nactual:  ", string(written.Bytes()),
+	if !bytes.Equal(expectedRequest, actualRequest) {
+		t.Log("client didn't send correct bytes:",
+			"\nexpected:", string(expectedRequest),
+			"\nactual:  ", string(actualRequest),
 		)
+		t.Fail()
 	}
 
-	if !bytes.Equal(reply, []byte(replyString)) {
-		t.Fatal("client didn't recieve correct bytes:",
-			"\nexpected:", replyString,
-			"\nactual:  ", string(reply),
+	if !bytes.Equal(expectedResponse, actualResponse) {
+		t.Log("client didn't recieve correct bytes:",
+			"\nexpected:", string(expectedResponse),
+			"\nactual:  ", string(actualResponse),
 		)
+		t.Fail()
 	}
 }

@@ -71,26 +71,19 @@ func pongCommand(msg outgoingMessage) error {
 	return nil
 }
 
-type deadlineReadWriter interface {
-	Read(b []byte) (int, error)
-	Write(b []byte) (int, error)
-	SetReadDeadline(t time.Time) error
-	SetWriteDeadline(t time.Time) error
-}
-
-func remoteCall(body []byte, rw deadlineReadWriter) ([]byte, error) {
+func remoteCall(body []byte, conn net.Conn) ([]byte, error) {
 	buf := bytes.NewBuffer(body)
 
 	// send message
-	rw.SetWriteDeadline(time.Now().Add(timeout))
-	_, err := io.Copy(rw, buf)
+	conn.SetWriteDeadline(time.Now().Add(timeout))
+	_, err := io.Copy(conn, buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
 	}
 
 	// get response
-	rw.SetReadDeadline(time.Now().Add(timeout))
-	_, err = io.Copy(buf, rw)
+	conn.SetReadDeadline(time.Now().Add(timeout))
+	_, err = io.Copy(buf, conn)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get response")
 	}
