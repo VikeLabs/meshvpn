@@ -7,6 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+	"github.com/vikelabs/meshvpn/common/proto"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"google.golang.org/grpc"
 )
 
 func run(c *cli.Context) error {
@@ -27,12 +30,12 @@ func run(c *cli.Context) error {
 }
 
 func listen(listener net.Listener) error {
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			return errors.Wrap(err, "error getting new connection")
-		}
-
-		go handleConnection(conn)
+	wg, err := wgctrl.New()
+	if err != nil {
+		return err
 	}
+
+	server := grpc.NewServer()
+	proto.RegisterMeshVPNServer(server, NewVPNServer(wg))
+	return server.Serve(listener)
 }

@@ -1,0 +1,40 @@
+syntax = "proto3";
+package meshvpn;
+
+option go_package = "github.com/vikelabs/meshvpn/common/proto";
+
+service MeshVPN {
+	rpc Ping (PingRequest) returns (PingReply);
+	rpc ServerConnect (ServerConnectRequest) returns (ServerConnectReply);
+	rpc PeerConnect (PeerConnectRequest) returns (PeerConnectReply);
+}
+
+message PingRequest {};
+
+message PingReply {};
+
+message ServerConnectRequest {
+	bytes client_pubkey = 1;
+}
+
+message ServerConnectReply {
+	bytes server_pubkey = 1;
+	int32 wireguard_port = 2;
+}
+
+message PeerConnectRequest {
+	bytes peer_pubkey = 1;
+}
+
+message PeerConnectReply {
+	message Location {
+		bytes ip = 1;
+		uint32 port = 2;
+	}
+	message None {}
+
+	oneof location {
+		Location seen = 1;
+		None unseen = 2;
+	}
+}
