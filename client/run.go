@@ -18,7 +18,7 @@ func run(c *cli.Context) error {
 	}
 
 	serverLocation := c.Args().Get(0)
-	wgDevName := c.Args().Get(1)
+	wgDevName := c.String("interface")
 
 	wg, err := wgctrl.New()
 	if err != nil {

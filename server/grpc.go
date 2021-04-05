@@ -8,17 +8,19 @@ import (
 )
 
 // NewVPNServer creates a new VPN server
-func NewVPNServer(wg *wgctrl.Client) VPNServer {
+func NewVPNServer(wg *wgctrl.Client, wgName string) VPNServer {
 	return VPNServer{
 		proto.UnimplementedMeshVPNServer{},
 		wg,
+		wgName,
 	}
 }
 
 // VPNServer is a protobuf server implementing MeshVPNServer
 type VPNServer struct {
 	proto.UnimplementedMeshVPNServer
-	wg *wgctrl.Client
+	wg     *wgctrl.Client
+	wgName string
 }
 
 func (VPNServer) mustEmbedUnimplementedMeshVPNServer() {}

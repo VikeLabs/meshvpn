@@ -26,16 +26,16 @@ func run(c *cli.Context) error {
 		return errors.Wrap(err, "error getting listener")
 	}
 
-	return listen(listener)
+	return listen(c, listener)
 }
 
-func listen(listener net.Listener) error {
+func listen(c *cli.Context, listener net.Listener) error {
 	wg, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
 
 	server := grpc.NewServer()
-	proto.RegisterMeshVPNServer(server, NewVPNServer(wg))
+	proto.RegisterMeshVPNServer(server, NewVPNServer(wg, c.String("interface")))
 	return server.Serve(listener)
 }

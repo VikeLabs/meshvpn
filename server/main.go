@@ -15,6 +15,12 @@ func main() {
 			Usage:    "the port to listen on",
 			Required: true,
 		},
+		&cli.StringFlag{
+			Name:     "interface",
+			Aliases:  []string{"i"},
+			Usage:    "the Wireguard interface to use",
+			Required: true,
+		},
 	}
 
 	app := &cli.App{
