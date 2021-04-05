@@ -19,4 +19,8 @@ meshvpn
 client/client
 server/server
 
+# testing
+testing/code/*
+!testing/code/README.md
+
 .vscode/

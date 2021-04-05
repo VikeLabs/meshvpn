@@ -1,0 +1,52 @@
+Vagrant.configure("2") do |config|
+    config.vm.box = "alpine/alpine64"
+
+    config.vm.provision :shell, :inline => $PROVISION_SCRIPT
+
+    config.vm.synced_folder "./code", "/home/vagrant/code"
+
+    config.vm.provider "virtualbox" do |vb|
+        vb.memory = "2048"
+    end
+end
+
+$PROVISION_SCRIPT = <<EOF
+    if [ -f "/var/vagrant_provision" ]; then
+        exit 0
+    fi
+
+    # Notice that `sudo` is used here throughout
+
+    #set -x -e     # verbose output, stop on any error
+    #set -x
+    
+    sudo apk add git make go wireguard-tools iputils iperf3
+
+    sudo sh -c "echo tun >> /etc/modules"
+    sudo modprobe tun
+
+    git clone https://github.com/malcolmseyd/wireguard-go.git
+    mv ./wireguard-go ./wireguard-go-git
+    cd ./wireguard-go-git
+    make
+
+    echo PATH=$PATH:/root/.local/bin | sudo tee -a /root/.bashrc > /dev/null
+    sudo mkdir -p /root/.local/bin
+    cp ./tests/netns.sh /root/.local/bin
+    cp ./tests/start.sh /root/.local/bin
+    cp ./tests/stop.sh /root/.local/bin
+
+    cp ./wireguard-go ..
+
+    sudo sh -c "cat ./tests/shell.sh >> /root/.bashrc"
+
+    sudo tee /etc/motd << END_MOTD > /dev/null
+
+Welcome to the MeshVPN testing environemnt.
+Please execute "sudo -s" to get into a root environment.
+
+END_MOTD
+
+    touch /var/vagrant_provision
+EOF
+
