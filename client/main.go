@@ -9,12 +9,6 @@ import (
 
 func main() {
 	flags := []cli.Flag{
-		&cli.Uint64Flag{
-			Name:     "port",
-			Aliases:  []string{"p"},
-			Usage:    "the port to listen on",
-			Required: true,
-		},
 		&cli.StringFlag{
 			Name:     "interface",
 			Aliases:  []string{"i"},

@@ -12,8 +12,8 @@ import (
 )
 
 func run(c *cli.Context) error {
-	if c.NArg() != 2 {
-		util.ErrPrintln("Error: expected 2 arguments, but got ", c.NArg())
+	if c.NArg() != 1 {
+		util.ErrPrintln("Error: expected 1 argument, but got ", c.NArg())
 		cli.ShowAppHelpAndExit(c, 1)
 	}
 
