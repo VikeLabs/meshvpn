@@ -22,5 +22,6 @@ server/server
 # testing
 testing/code/*
 !testing/code/README.md
+testing/.vagrant
 
 .vscode/
