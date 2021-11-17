@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/urfave/cli/v2"
 	"github.com/vikelabs/meshvpn/common/proto"
@@ -32,15 +33,21 @@ func run(c *cli.Context) error {
 	}
 	client := proto.NewMeshVPNClient(conn)
 
-	fmt.Println("Pinging...")
-	_, err = client.Ping(context.Background(), &proto.PingRequest{})
+	fmt.Println("Wireguard device info:")
+	conf, err := wg.Device(wgDevName)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Ping successful!")
+	fmt.Println("PublicKey:", conf.PublicKey)
+	fmt.Println("***********************")
 
-	fmt.Println("Wireguard device info:")
-	fmt.Println(wg.Device(wgDevName))
+	// Server connect
+	r, err := client.ServerConnect(context.Background(), &proto.ServerConnectRequest{ClientPubkey: []byte(conf.PublicKey.String())})
+	if err != nil {
+		return err
+	}
+	log.Printf("ServerPubkey:", string(r.GetServerPubkey()))
+	log.Printf("WireguardPort:", r.GetWireguardPort())
 
 	return nil
 }

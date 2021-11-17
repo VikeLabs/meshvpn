@@ -4,6 +4,7 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -34,6 +35,16 @@ func listen(c *cli.Context, listener net.Listener) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Wireguard device info:")
+	wgDevName := c.String("interface")
+	conf, err := wg.Device(wgDevName)
+	if err != nil {
+		return err
+	}
+	fmt.Println("PublicKey:", conf.PublicKey)
+	fmt.Println("WireguardPort:", conf.ListenPort)
+	fmt.Println("***********************")
 
 	server := grpc.NewServer()
 	proto.RegisterMeshVPNServer(server, NewVPNServer(wg, c.String("interface")))

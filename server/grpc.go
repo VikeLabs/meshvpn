@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"github.com/vikelabs/meshvpn/common/proto"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -27,6 +28,18 @@ func (VPNServer) mustEmbedUnimplementedMeshVPNServer() {}
 
 // Ping is an rpc which simply returns.
 func (s VPNServer) Ping(ctx context.Context, req *proto.PingRequest) (*proto.PingReply, error) {
-
+	log.Printf("Recieved Ping:")
 	return &proto.PingReply{}, nil
+}
+
+// ServerConnect is an rpc which returns the PublicKey and WireguardPort.
+func (s VPNServer) ServerConnect(ctx context.Context, req *proto.ServerConnectRequest) (*proto.ServerConnectReply, error) {
+	log.Printf("ClientPubkey:", string(req.GetClientPubkey()))
+
+	conf, err := s.wg.Device(s.wgName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.ServerConnectReply{ServerPubkey: []byte(conf.PublicKey.String()), WireguardPort: int32(conf.ListenPort)}, nil
 }
